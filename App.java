@@ -9,107 +9,109 @@ import java.util.regex.*;
 
 public class App extends Frame implements WindowListener, ActionListener, Runnable {
 
-	InetAddress addrs;
-	int port = 12121;
-	DatagramSocket sock;
+	private static final int PORT = 12121;
+	private final InetAddress addrs;
 
-	TextField name;
-	TextArea disp;
-	TextField input;
-	Button send;
-	Button connect;
+	private final DatagramSocket sock;
 
-	Map<InetAddress, String> lookupTable;
+	private final TextField name;
+	private final TextArea disp;
+	private final TextField input;
+	private final Button send;
+	private final Button connect;
+
+	private final Map<InetAddress, String> lookupTable = new HashMap<>();
 
 	public App() throws Exception {
 		super("uChat");
 
-		addrs = InetAddress.getByName("255.255.255.255");
-		sock = new DatagramSocket(port);
+		this.addrs = InetAddress.getByName("255.255.255.255");
+		this.sock = new DatagramSocket(PORT);
 
-		lookupTable = new HashMap<InetAddress, String>();
+		this.disp = new TextArea("", 0, 0, TextArea.SCROLLBARS_VERTICAL_ONLY);
+		this.input = new TextField();
+		this.name = new TextField();
+		this.send = new Button("Send");
+		this.connect = new Button("Join");
 
-		disp = new TextArea("", 0, 0, TextArea.SCROLLBARS_VERTICAL_ONLY);
-		input = new TextField();
-		name = new TextField();
-		send = new Button("Send");
-		connect = new Button("Join");
+		this.disp.setEditable(false);
 
-		disp.setEditable(false);
+		final Panel namePanel = new Panel(new BorderLayout());
+		namePanel.add(new Label("Name:"), BorderLayout.WEST);
+		namePanel.add(this.name, BorderLayout.CENTER);
+		namePanel.add(this.connect, BorderLayout.EAST);
 
-		Panel pnl1 = new Panel(new BorderLayout());
-		pnl1.add(new Label("Name:"), BorderLayout.WEST);
-		pnl1.add(name, BorderLayout.CENTER);
-		pnl1.add(connect, BorderLayout.EAST);
+		final Panel messagePanel = new Panel(new BorderLayout());
+		messagePanel.add(this.input, BorderLayout.CENTER);
+		messagePanel.add(this.send, BorderLayout.EAST);
 
-		Panel pnl2 = new Panel(new BorderLayout());
-		pnl2.add(input, BorderLayout.CENTER);
-		pnl2.add(send, BorderLayout.EAST);
+		this.setLayout(new BorderLayout());
+		add(namePanel, BorderLayout.NORTH);
+		add(this.disp, BorderLayout.CENTER);
+		add(messagePanel, BorderLayout.SOUTH);
 
-		setLayout(new BorderLayout());
-		add(pnl1, BorderLayout.NORTH);
-		add(disp, BorderLayout.CENTER);
-		add(pnl2, BorderLayout.SOUTH);
+		new Thread(this).start();
 
-		Thread t = new Thread(this);
-		t.start();
-
-		send.addActionListener(this);
-		connect.addActionListener(this);
-		input.addActionListener(this);
-		name.addActionListener(this);
-		addWindowListener(this);
-		setVisible(true);
+		this.send.addActionListener(this);
+		this.connect.addActionListener(this);
+		this.input.addActionListener(this);
+		this.name.addActionListener(this);
+		this.addWindowListener(this);
+		this.setVisible(true);
 	}
 
-	public void setVisible(boolean b) {
+	public void setVisible(final boolean b) {
 		super.setVisible(b);
 		if(b) {
-			pack();
-			Dimension scrn = Toolkit.getDefaultToolkit().getScreenSize();
-			setLocation((scrn.width-this.getSize().width)/1, (scrn.height-this.getSize().height)/1);
+			this.pack();
+			final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+
+			// move to bottom-left of screen
+			final int newX = screenSize.width - this.getSize().width;
+			final int newY = screenSize.height - this.getSize().height;
+			this.setLocation(newX, newY);
 		}
 	}
 
-	public static void main(String arg[]) {
+	public static void main(final String[] args) {
 		try {
 			new App();
 		}
-		catch(Exception e) {
-			handle(e);
+		catch(final Exception e) {
+			App.handle(e);
 		}
 	}
 
-	public void actionPerformed(ActionEvent evt) {
-		if(name.getText().trim().equals(""))
+	public void actionPerformed(final ActionEvent evt) {
+		if(this.name.getText().trim().equals(""))
 			return;
 
 		byte[] data = null;
 		try {
-			if(evt.getSource() == input || evt.getSource() == send) {
-				if(input.getText().trim().equals(""))
+			if(evt.getSource() == this.input || evt.getSource() == this.send) {
+				if(this.input.getText().trim().equals(""))
 					return;
-				if(!connect.getLabel().equals("Leave"))
+				if(!this.connect.getLabel().equals("Leave"))
 					return;
 				// collapse spaces to prevent exploiting text wrapping
-				input.setText(
+				this.input.setText(
 						Pattern.compile(" {3,}")
-						.matcher(input.getText().trim())
+						.matcher(this.input.getText().trim())
 						.replaceAll("  ")
 					);
-				data = "SAY:".concat(input.getText()).getBytes("ISO-8859-1");
+				data = "SAY:".concat(this.input.getText()).getBytes("ISO-8859-1");
 			}
-			else if(evt.getSource() == connect || evt.getSource() == name) {
-				if(connect.getLabel() == "Join") {
-					name.setEditable(false);
-					data = "JOIN".concat(name.getText()).getBytes("ISO-8859-1");
-					connect.setLabel("Leave");
-					input.requestFocus();
+			else if(evt.getSource() == this.connect || evt.getSource() == this.name) {
+				if(this.connect.getLabel() == "Join") {
+					this.name.setEditable(false);
+					data = "JOIN".concat(this.name.getText()).getBytes("ISO-8859-1");
+					this.connect.setLabel("Leave");
+					this.input.requestFocus();
 				}
-				else if (connect.getLabel() == "Leave") {
-					data = "LEAV".concat(name.getText()).getBytes("ISO-8859-1");
-					connect.setLabel("Join");
-					name.setEditable(true);    
+				else if (this.connect.getLabel() == "Leave") {
+					data = "LEAV".concat(this.name.getText()).getBytes("ISO-8859-1");
+					this.connect.setLabel("Join");
+					this.name.setEditable(true);
 				}
 				else { /* shouldn't happen */
 					return;
@@ -119,114 +121,110 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 				return;
 			}
 
-			DatagramPacket out = new DatagramPacket(data, data.length, addrs, port);
-			sock.send(out);
+			this.sock.send(new DatagramPacket(data, data.length, addrs, PORT));
 		}
-		catch(Exception e) {
-			handle(e);
+		catch(final Exception e) {
+			App.handle(e);
 		}
-		input.setText("");
+		this.input.setText("");
 	}
 
-	boolean die = false;
+	private boolean die = false;
 	public void run() {
 		while(!die) {
-			byte[] data = new byte[1024];
-			DatagramPacket in = new DatagramPacket(data, data.length);
+			final byte[] data = new byte[1024];
+			final DatagramPacket incomingPacket = new DatagramPacket(data, data.length);
 			try {
-				sock.receive(in);
+				this.sock.receive(incomingPacket);
 
-				String tmpIN = new String(data, "ISO-8859-1");
+				final String inStr = new String(data, "ISO-8859-1");
 
-				if(tmpIN.startsWith("SAY:")) {
-					String who = lookupTable.get(in.getAddress());
-					disp.append(who+": "+new String(data, 4, in.getLength()-4, "ISO-8859-1")+"\n");
-					toFront();
+				if(inStr.startsWith("SAY:")) {
+					final String who = this.lookupTable.get(incomingPacket.getAddress());
+					this.disp.append(who+": "+new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1")+"\n");
+					this.toFront();
 					Toolkit.getDefaultToolkit().beep();
 				}
-				else if(tmpIN.startsWith("JOIN")) {
-					InetAddress tmp = in.getAddress();
-					String tmpS = new String(data, 4, in.getLength()-4, "ISO-8859-1");
-					lookupTable.put(tmp, tmpS);
-					disp.append(tmpS+'('+tmp.getHostAddress()+')'+" has joined\n");
+				else if(inStr.startsWith("JOIN")) {
+					final InetAddress tmp = incomingPacket.getAddress();
+					final String tmpS = new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1");
+					this.lookupTable.put(tmp, tmpS);
+					this.disp.append(tmpS+'('+tmp.getHostAddress()+')'+" has joined\n");
 
-					byte[] send = "HERE".concat(name.getText()).getBytes("ISO-8859-1");
-					DatagramPacket outbound = new DatagramPacket(send, send.length, tmp, port);
-					sock.send(outbound);
+					byte[] send = "HERE".concat(this.name.getText()).getBytes("ISO-8859-1");
+					this.sock.send(new DatagramPacket(send, send.length, tmp, PORT));
 				}
-				else if(tmpIN.startsWith("HERE")) {
-					InetAddress tmp = in.getAddress();
-					String tmpS = new String(data, 4, in.getLength()-4, "ISO-8859-1");
-					lookupTable.put(tmp, tmpS);
+				else if(inStr.startsWith("HERE")) {
+					final InetAddress tmp = incomingPacket.getAddress();
+					final String tmpS = new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1");
+					this.lookupTable.put(tmp, tmpS);
 
-					if(!tmpS.equals(name.getText())) { //needed to suppress "you are here"
-						disp.append(tmpS+'('+tmp.getHostAddress()+')'+" is here\n");
+					if(!tmpS.equals(this.name.getText())) { //needed to suppress "you are here"
+						this.disp.append(tmpS+'('+tmp.getHostAddress()+')'+" is here\n");
 					}
 				}
-				else if(tmpIN.startsWith("LEAV")) {
-					InetAddress tmp = in.getAddress();
-					String tmpS = new String(data, 4, in.getLength()-4, "ISO-8859-1");
-					lookupTable.remove(tmp);
-					disp.append(tmpS+'('+tmp.getHostAddress()+')'+" has left\n");
+				else if(inStr.startsWith("LEAV")) {
+					final InetAddress tmp = incomingPacket.getAddress();
+					final String tmpS = new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1");
+					this.lookupTable.remove(tmp);
+					this.disp.append(tmpS+'('+tmp.getHostAddress()+')'+" has left\n");
 				}
 				else { /* unknown, silently ignore */ }
 			}
-			catch(Exception e) {
-				handle(e);
+			catch(final Exception e) {
+				App.handle(e);
 			}
 		}
 		try {
-			sock.close();
+			this.sock.close();
 		}
-		catch(Exception e) {
-			handle(e);
+		catch(final Exception e) {
+			App.handle(e);
 		}
 	}
 
-	public void windowClosing(WindowEvent evt) {
-		setVisible(false);
+	public void windowClosing(final WindowEvent evt) {
+		this.setVisible(false);
 
-		if(connect.getLabel() == "Join") { //only send LEAV if we're JOINed
+		if(this.connect.getLabel() == "Join") { //only send LEAV if we're JOINed
 			try {
-				byte[] data = "LEAV".concat(name.getText()).getBytes("ISO-8859-1");
-				DatagramPacket out = new DatagramPacket(data, data.length, addrs, port);
-				sock.send(out);
+				final byte[] data = "LEAV".concat(name.getText()).getBytes("ISO-8859-1");
+				this.sock.send(new DatagramPacket(data, data.length, addrs, PORT));
 			}
-			catch(Exception e) {
-				handle(e);
+			catch(final Exception e) {
+				App.handle(e);
 			}
 		}
 
-		die = true;
-		dispose();
+		this.die = true;
+		this.dispose();
 		// System.exit(0);
 	}
-	public void windowOpened(WindowEvent evt) { }
-	public void windowClosed(WindowEvent evt) { }
-	public void windowIconified(WindowEvent evt) { }
-	public void windowDeiconified(WindowEvent evt) { }
-	public void windowActivated(WindowEvent evt) { }
-	public void windowDeactivated(WindowEvent evt) { }
+	public void windowOpened(final WindowEvent evt) { }
+	public void windowClosed(final WindowEvent evt) { }
+	public void windowIconified(final WindowEvent evt) { }
+	public void windowDeiconified(final WindowEvent evt) { }
+	public void windowActivated(final WindowEvent evt) { }
+	public void windowDeactivated(final WindowEvent evt) { }
 
-	public static void handle(Exception e) {
-		StringWriter sb = new StringWriter();
-		PrintWriter out = new PrintWriter(sb);
+	public static void handle(final Exception e) {
+		final StringWriter sb = new StringWriter();
 
-		e.printStackTrace(out);
+		e.printStackTrace(new PrintWriter(sb));
 		e.printStackTrace(System.out);
 
-		TextArea disp = new TextArea(sb.getBuffer().toString());
+		final TextArea disp = new TextArea(sb.getBuffer().toString());
 
-		Frame f0 = new Frame("Oops");
-		f0.setLayout(new BorderLayout());
-		f0.addWindowListener(new WindowAdapter() {
-			public void windowClosing(WindowEvent evt) { ((Window)evt.getSource()).dispose(); }
+		final Frame errorDisplayFrame = new Frame("Oops");
+		errorDisplayFrame.setLayout(new BorderLayout());
+		errorDisplayFrame.addWindowListener(new WindowAdapter() {
+			public void windowClosing(final WindowEvent evt) { errorDisplayFrame.dispose(); }
 		});
 
-		f0.add(new Label("Oops, something went wrong. uC may or may not still work."), BorderLayout.NORTH);
-		f0.add(disp, BorderLayout.CENTER);
+		errorDisplayFrame.add(new Label("Oops, something went wrong. uC may or may not still work."), BorderLayout.NORTH);
+		errorDisplayFrame.add(disp, BorderLayout.CENTER);
 
-		f0.pack();
-		f0.setVisible(true);
+		errorDisplayFrame.pack();
+		errorDisplayFrame.setVisible(true);
 	}
 }
