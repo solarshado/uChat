@@ -14,11 +14,11 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 
 	private final DatagramSocket sock;
 
-	private final TextField name;
-	private final TextArea disp;
-	private final TextField input;
-	private final Button send;
-	private final Button connect;
+	private final TextField name = new TextField();
+	private final TextArea disp = new TextArea("", 0, 0, TextArea.SCROLLBARS_VERTICAL_ONLY);
+	private final TextField input = new TextField();
+	private final Button send = new Button("Send");
+	private final Button connect = new Button("Join");
 
 	private final Map<InetAddress, String> lookupTable = new HashMap<>();
 
@@ -27,12 +27,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 
 		this.addrs = InetAddress.getByName("255.255.255.255");
 		this.sock = new DatagramSocket(PORT);
-
-		this.disp = new TextArea("", 0, 0, TextArea.SCROLLBARS_VERTICAL_ONLY);
-		this.input = new TextField();
-		this.name = new TextField();
-		this.send = new Button("Send");
-		this.connect = new Button("Join");
 
 		this.disp.setEditable(false);
 
