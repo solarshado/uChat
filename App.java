@@ -1,6 +1,7 @@
 import java.util.*;
 import java.net.*;
 import java.io.*;
+import java.nio.charset.*;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -9,6 +10,7 @@ import java.util.regex.*;
 
 public class App extends Frame implements WindowListener, ActionListener, Runnable {
 
+	private static final Charset CHARSET = StandardCharsets.ISO_8859_1;
 	private static final int PORT = 12121;
 	private final InetAddress addrs;
 
@@ -76,6 +78,14 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		}
 	}
 
+	private static String stringFromBytes(final byte[] bytes, final int length) {
+		return new String(bytes, 0, length, CHARSET);
+	}
+
+	private static byte[] bytesFromString(final String str) {
+		return str.getBytes(CHARSET);
+	}
+
 	public void actionPerformed(final ActionEvent evt) {
 		if(this.name.getText().trim().equals(""))
 			return;
@@ -93,17 +103,17 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 						.matcher(this.input.getText().trim())
 						.replaceAll("  ")
 					);
-				data = "SAY:".concat(this.input.getText()).getBytes("ISO-8859-1");
+				data = bytesFromString("SAY:".concat(this.input.getText()));
 			}
 			else if(evt.getSource() == this.connect || evt.getSource() == this.name) {
 				if(this.connect.getLabel() == "Join") {
 					this.name.setEditable(false);
-					data = "JOIN".concat(this.name.getText()).getBytes("ISO-8859-1");
+					data = bytesFromString("JOIN".concat(this.name.getText()));
 					this.connect.setLabel("Leave");
 					this.input.requestFocus();
 				}
 				else if (this.connect.getLabel() == "Leave") {
-					data = "LEAV".concat(this.name.getText()).getBytes("ISO-8859-1");
+					data = bytesFromString("LEAV".concat(this.name.getText()));
 					this.connect.setLabel("Join");
 					this.name.setEditable(true);
 				}
@@ -131,37 +141,34 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			try {
 				this.sock.receive(incomingPacket);
 
-				final String inStr = new String(data, "ISO-8859-1");
+				final InetAddress srcAddr = incomingPacket.getAddress();
+				final String inStr = stringFromBytes(data, incomingPacket.getLength());
+				final String msgCode = inStr.substring(0,4);
+				final String msgBody = inStr.substring(4);
 
-				if(inStr.startsWith("SAY:")) {
-					final String who = this.lookupTable.get(incomingPacket.getAddress());
-					this.disp.append(who+": "+new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1")+"\n");
+				if("SAY:".equals(msgCode)) {
+					final String who = this.lookupTable.get(srcAddr);
+					this.disp.append(who+": "+msgBody+"\n");
 					this.toFront();
 					Toolkit.getDefaultToolkit().beep();
 				}
-				else if(inStr.startsWith("JOIN")) {
-					final InetAddress tmp = incomingPacket.getAddress();
-					final String tmpS = new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1");
-					this.lookupTable.put(tmp, tmpS);
-					this.disp.append(tmpS+'('+tmp.getHostAddress()+')'+" has joined\n");
+				else if("JOIN".equals(msgCode)) {
+					this.lookupTable.put(srcAddr, msgBody);
+					this.disp.append(msgBody+'('+srcAddr.getHostAddress()+')'+" has joined\n");
 
-					byte[] send = "HERE".concat(this.name.getText()).getBytes("ISO-8859-1");
-					this.sock.send(new DatagramPacket(send, send.length, tmp, PORT));
+					final byte[] send = bytesFromString("HERE".concat(this.name.getText()));
+					this.sock.send(new DatagramPacket(send, send.length, srcAddr, PORT));
 				}
-				else if(inStr.startsWith("HERE")) {
-					final InetAddress tmp = incomingPacket.getAddress();
-					final String tmpS = new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1");
-					this.lookupTable.put(tmp, tmpS);
+				else if("HERE".equals(msgCode)) {
+					this.lookupTable.put(srcAddr, msgBody);
 
-					if(!tmpS.equals(this.name.getText())) { //needed to suppress "you are here"
-						this.disp.append(tmpS+'('+tmp.getHostAddress()+')'+" is here\n");
+					if(!this.name.getText().equals(msgBody)) { //needed to suppress "you are here"
+						this.disp.append(msgBody+'('+srcAddr.getHostAddress()+')'+" is here\n");
 					}
 				}
-				else if(inStr.startsWith("LEAV")) {
-					final InetAddress tmp = incomingPacket.getAddress();
-					final String tmpS = new String(data, 4, incomingPacket.getLength()-4, "ISO-8859-1");
-					this.lookupTable.remove(tmp);
-					this.disp.append(tmpS+'('+tmp.getHostAddress()+')'+" has left\n");
+				else if("LEAV".equals(msgCode)) {
+					this.lookupTable.remove(srcAddr);
+					this.disp.append(msgBody+'('+srcAddr.getHostAddress()+')'+" has left\n");
 				}
 				else { /* unknown, silently ignore */ }
 			}
@@ -182,7 +189,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 
 		if(this.connect.getLabel() == "Join") { //only send LEAV if we're JOINed
 			try {
-				final byte[] data = "LEAV".concat(name.getText()).getBytes("ISO-8859-1");
+				final byte[] data = bytesFromString("LEAV".concat(name.getText()));
 				this.sock.send(new DatagramPacket(data, data.length, addrs, PORT));
 			}
 			catch(final Exception e) {
