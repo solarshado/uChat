@@ -15,6 +15,7 @@ public class App extends Frame implements ActionListener, Runnable {
 	private final InetAddress addrs;
 
 	private final DatagramSocket sock;
+	private final Thread netListenerThread = new Thread(this);
 
 	private final TextField name = new TextField();
 	private final TextArea disp = new TextArea("", 0, 0, TextArea.SCROLLBARS_VERTICAL_ONLY);
@@ -47,8 +48,6 @@ public class App extends Frame implements ActionListener, Runnable {
 		add(this.disp, BorderLayout.CENTER);
 		add(messagePanel, BorderLayout.SOUTH);
 
-		new Thread(this).start();
-
 		this.send.addActionListener(this);
 		this.connect.addActionListener(this);
 		this.input.addActionListener(this);
@@ -60,6 +59,7 @@ public class App extends Frame implements ActionListener, Runnable {
 			}
 		});
 
+		this.netListenerThread.start();
 		this.setVisible(true);
 	}
 
@@ -186,17 +186,11 @@ public class App extends Frame implements ActionListener, Runnable {
 				App.handle(e);
 			}
 		}
-		try {
-			this.sock.close();
-		}
-		catch(final Exception e) {
-			App.handle(e);
-		}
 	}
 
 	private void windowClosing() {
 		this.setVisible(false);
-		this.die = true;
+		this.dispose();
 
 		if(this.connect.getLabel() == "Join") { //only send LEAV if we're JOINed
 			try {
@@ -208,7 +202,20 @@ public class App extends Frame implements ActionListener, Runnable {
 			}
 		}
 
-		this.dispose();
+		this.die = true;
+		while(this.netListenerThread.isAlive()) {
+			try {
+				this.netListenerThread.join();
+			}
+			catch(final InterruptedException e) { /* ignore and try again */ }
+		}
+
+		try {
+			this.sock.close();
+		}
+		catch(final Exception e) {
+			App.handle(e);
+		}
 	}
 
 	public static void handle(final Exception e) {
