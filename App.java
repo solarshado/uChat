@@ -192,6 +192,7 @@ public class App extends Frame implements ActionListener, Runnable {
 
 	private void windowClosing() {
 		this.setVisible(false);
+		this.die = true;
 
 		if(this.connect.getLabel() == "Join") { //only send LEAV if we're JOINed
 			try {
@@ -203,9 +204,7 @@ public class App extends Frame implements ActionListener, Runnable {
 			}
 		}
 
-		this.die = true;
 		this.dispose();
-		// System.exit(0);
 	}
 
 	public static void handle(final Exception e) {
