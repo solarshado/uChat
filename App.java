@@ -29,6 +29,7 @@ public class App extends Frame implements ActionListener, Runnable {
 
 		this.addrs = InetAddress.getByName("255.255.255.255");
 		this.sock = new DatagramSocket(PORT);
+		this.sock.setSoTimeout(500); // 500 milliseconds
 
 		this.disp.setEditable(false);
 
@@ -139,7 +140,7 @@ public class App extends Frame implements ActionListener, Runnable {
 		this.input.setText("");
 	}
 
-	private boolean die = false;
+	private volatile boolean die = false;
 	public void run() {
 		while(!die) {
 			final byte[] data = new byte[1024];
@@ -177,6 +178,9 @@ public class App extends Frame implements ActionListener, Runnable {
 					this.disp.append(msgBody+'('+srcAddr.getHostAddress()+')'+" has left\n");
 				}
 				else { /* unknown, silently ignore */ }
+			}
+			catch(final SocketTimeoutException e) {
+				// ignore it, it's to be expected
 			}
 			catch(final Exception e) {
 				App.handle(e);
