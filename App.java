@@ -8,7 +8,7 @@ import java.awt.event.*;
 
 import java.util.regex.*;
 
-public class App extends Frame implements WindowListener, ActionListener, Runnable {
+public class App extends Frame implements ActionListener, Runnable {
 
 	private static final Charset CHARSET = StandardCharsets.ISO_8859_1;
 	private static final int PORT = 12121;
@@ -52,7 +52,13 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		this.connect.addActionListener(this);
 		this.input.addActionListener(this);
 		this.name.addActionListener(this);
-		this.addWindowListener(this);
+
+		this.addWindowListener(new WindowAdapter() {
+			public void windowClosing(final WindowEvent evt) {
+				App.this.windowClosing();
+			}
+		});
+
 		this.setVisible(true);
 	}
 
@@ -184,7 +190,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		}
 	}
 
-	public void windowClosing(final WindowEvent evt) {
+	private void windowClosing() {
 		this.setVisible(false);
 
 		if(this.connect.getLabel() == "Join") { //only send LEAV if we're JOINed
@@ -201,12 +207,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		this.dispose();
 		// System.exit(0);
 	}
-	public void windowOpened(final WindowEvent evt) { }
-	public void windowClosed(final WindowEvent evt) { }
-	public void windowIconified(final WindowEvent evt) { }
-	public void windowDeiconified(final WindowEvent evt) { }
-	public void windowActivated(final WindowEvent evt) { }
-	public void windowDeactivated(final WindowEvent evt) { }
 
 	public static void handle(final Exception e) {
 		final StringWriter sb = new StringWriter();
