@@ -93,6 +93,12 @@ public class App extends Frame implements ActionListener, Runnable {
 		return str.getBytes(CHARSET);
 	}
 
+	private static Pattern tooManySpacesPattern = Pattern.compile(" {3,}");
+	private static String scrubMessage(final String unclean) {
+		// collapse spaces to prevent exploiting text wrapping
+		return tooManySpacesPattern.matcher(unclean).replaceAll("  ").trim();
+	}
+
 	public void actionPerformed(final ActionEvent evt) {
 		if(this.name.getText().trim().equals(""))
 			return;
@@ -104,12 +110,7 @@ public class App extends Frame implements ActionListener, Runnable {
 					return;
 				if(!this.connect.getLabel().equals("Leave"))
 					return;
-				// collapse spaces to prevent exploiting text wrapping
-				this.input.setText(
-						Pattern.compile(" {3,}")
-						.matcher(this.input.getText().trim())
-						.replaceAll("  ")
-					);
+				this.input.setText(scrubMessage(this.input.getText()));
 				data = bytesFromString("SAY:".concat(this.input.getText()));
 			}
 			else if(evt.getSource() == this.connect || evt.getSource() == this.name) {
@@ -155,7 +156,7 @@ public class App extends Frame implements ActionListener, Runnable {
 
 				if("SAY:".equals(msgCode)) {
 					final String who = this.lookupTable.get(srcAddr);
-					this.disp.append(who+": "+msgBody+"\n");
+					this.disp.append(who+": "+scrubMessage(msgBody)+"\n");
 					this.toFront();
 					Toolkit.getDefaultToolkit().beep();
 				}
